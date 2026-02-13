@@ -1,562 +1,394 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
-  defs,
-  linearGradient,
-  Stop
-} from 'recharts';
-import { 
-  Search, 
-  Upload, 
-  Activity, 
-  Filter, 
-  AlertCircle,
-  TrendingDown,
-  DollarSign,
-  PieChart,
-  LayoutDashboard,
-  FileText,
-  ChevronRight,
-  ArrowUpRight,
-  ArrowDownRight,
-  Database
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Standard Charges Dashboard</title>
+    
+    <!-- 1. Load Tailwind CSS (Styling) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Basic Styling Reset -->
+    <style>
+        body { margin: 0; font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        /* Smooth scrolling for the whole page */
+        html { scroll-behavior: smooth; }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body>
+    <!-- The Root Element where React will render -->
+    <div id="root"></div>
 
-// --- Static Data (Embedded for GitHub Pages) ---
-// This replaces the need for an initial file upload.
-const STATIC_DATA = [
-  {
-    "description": "IMPLANT BREAST MOD PROJECT 510CC 10712510MP",
-    "code|1": "9940207",
-    "standard_charge|gross": "6160.00",
-    "standard_charge|discounted_cash": "6160.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "6036.80"
-  },
-  {
-    "description": "MRI BRAIN W/O CONTRAST",
-    "code|1": "70551",
-    "standard_charge|gross": "3200.00",
-    "standard_charge|discounted_cash": "1250.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "1450.00"
-  },
-  {
-    "description": "CT ABDOMEN W/ CONTRAST",
-    "code|1": "74160",
-    "standard_charge|gross": "4500.00",
-    "standard_charge|discounted_cash": "1800.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "2100.00"
-  },
-  {
-    "description": "EMERGENCY DEPT VISIT LEVEL 3",
-    "code|1": "99283",
-    "standard_charge|gross": "1800.00",
-    "standard_charge|discounted_cash": "650.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "750.00"
-  },
-  {
-    "description": "COMPREHENSIVE METABOLIC PANEL",
-    "code|1": "80053",
-    "standard_charge|gross": "250.00",
-    "standard_charge|discounted_cash": "45.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "65.00"
-  },
-  {
-    "description": "HC X-RAY EXAM CHEST 2 VIEWS",
-    "code|1": "71046",
-    "standard_charge|gross": "485.00",
-    "standard_charge|discounted_cash": "120.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "185.00"
-  },
-  {
-    "description": "HC LOWER EXTREMITY MRI JNT W/O CON",
-    "code|1": "73721",
-    "standard_charge|gross": "2850.00",
-    "standard_charge|discounted_cash": "950.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "1150.00"
-  },
-  {
-    "description": "HC SURG PATH LEVEL IV",
-    "code|1": "88305",
-    "standard_charge|gross": "395.00",
-    "standard_charge|discounted_cash": "150.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "195.00"
-  },
-  {
-    "description": "HC COLONOSCOPY W/BIOPSY",
-    "code|1": "45380",
-    "standard_charge|gross": "3200.00",
-    "standard_charge|discounted_cash": "1400.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "1650.00"
-  },
-  {
-    "description": "HC ECHOCARDIOGRAPHY COMPLETE",
-    "code|1": "93306",
-    "standard_charge|gross": "1950.00",
-    "standard_charge|discounted_cash": "650.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "850.00"
-  },
-  {
-    "description": "HC ELECTROCARDIOGRAM ROUTINE",
-    "code|1": "93000",
-    "standard_charge|gross": "185.00",
-    "standard_charge|discounted_cash": "55.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "85.00"
-  },
-  {
-    "description": "HC MAMMOGRAPHY SCREENING DIGITAL",
-    "code|1": "77067",
-    "standard_charge|gross": "420.00",
-    "standard_charge|discounted_cash": "180.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "250.00"
-  },
-  {
-    "description": "HC PT EVAL LOW COMPLEX 20 MIN",
-    "code|1": "97161",
-    "standard_charge|gross": "210.00",
-    "standard_charge|discounted_cash": "85.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "115.00"
-  },
-  {
-    "description": "HC THERAPEUTIC EXERCISES 15 MIN",
-    "code|1": "97110",
-    "standard_charge|gross": "145.00",
-    "standard_charge|discounted_cash": "55.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "75.00"
-  },
-  {
-    "description": "HC URINE BACTERIA CULTURE",
-    "code|1": "87086",
-    "standard_charge|gross": "95.00",
-    "standard_charge|discounted_cash": "25.00",
-    "standard_charge|Aetna Health Inc.|Commercial|negotiated_dollar": "40.00"
-  }
-];
+    <!-- 3. The React Application Logic -->
+    <script type="module">
+        // Import React and libraries directly from the web (ESM)
+        import React, { useState, useMemo } from "https://esm.sh/react@18.2.0";
+        import ReactDOM from "https://esm.sh/react-dom@18.2.0/client";
+        import { 
+            BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+        } from "https://esm.sh/recharts@2.12.0?external=react,react-dom";
+        import { 
+            Search, Upload, Activity, Filter, AlertCircle, TrendingDown, DollarSign, 
+            PieChart, LayoutDashboard, FileText, ChevronRight, ArrowUpRight, ArrowDownRight, Database 
+        } from "https://esm.sh/lucide-react@0.330.0?external=react,react-dom";
 
-// --- Custom CSV Parser ---
-const parseCSV = (text) => {
-  const arr = [];
-  let quote = false;
-  let col = 0, row = 0;
-  arr[row] = [];
-  arr[row][col] = '';
+        // --- STATIC DATA ---
+        const STATIC_DATA = [
+            { "description": "IMPLANT BREAST MOD PROJECT 510CC 10712510MP", "code|1": "9940207", "standard_charge|gross": "6160.00", "standard_charge|discounted_cash": "6160.00" },
+            { "description": "MRI BRAIN W/O CONTRAST", "code|1": "70551", "standard_charge|gross": "3200.00", "standard_charge|discounted_cash": "1250.00" },
+            { "description": "CT ABDOMEN W/ CONTRAST", "code|1": "74160", "standard_charge|gross": "4500.00", "standard_charge|discounted_cash": "1800.00" },
+            { "description": "EMERGENCY DEPT VISIT LEVEL 3", "code|1": "99283", "standard_charge|gross": "1800.00", "standard_charge|discounted_cash": "650.00" },
+            { "description": "COMPREHENSIVE METABOLIC PANEL", "code|1": "80053", "standard_charge|gross": "250.00", "standard_charge|discounted_cash": "45.00" },
+            { "description": "HC X-RAY EXAM CHEST 2 VIEWS", "code|1": "71046", "standard_charge|gross": "485.00", "standard_charge|discounted_cash": "120.00" },
+            { "description": "HC LOWER EXTREMITY MRI JNT W/O CON", "code|1": "73721", "standard_charge|gross": "2850.00", "standard_charge|discounted_cash": "950.00" },
+            { "description": "HC SURG PATH LEVEL IV", "code|1": "88305", "standard_charge|gross": "395.00", "standard_charge|discounted_cash": "150.00" },
+            { "description": "HC COLONOSCOPY W/BIOPSY", "code|1": "45380", "standard_charge|gross": "3200.00", "standard_charge|discounted_cash": "1400.00" },
+            { "description": "HC ECHOCARDIOGRAPHY COMPLETE", "code|1": "93306", "standard_charge|gross": "1950.00", "standard_charge|discounted_cash": "650.00" },
+            { "description": "HC ELECTROCARDIOGRAM ROUTINE", "code|1": "93000", "standard_charge|gross": "185.00", "standard_charge|discounted_cash": "55.00" },
+            { "description": "HC MAMMOGRAPHY SCREENING DIGITAL", "code|1": "77067", "standard_charge|gross": "420.00", "standard_charge|discounted_cash": "180.00" },
+            { "description": "HC PT EVAL LOW COMPLEX 20 MIN", "code|1": "97161", "standard_charge|gross": "210.00", "standard_charge|discounted_cash": "85.00" },
+            { "description": "HC THERAPEUTIC EXERCISES 15 MIN", "code|1": "97110", "standard_charge|gross": "145.00", "standard_charge|discounted_cash": "55.00" },
+            { "description": "HC URINE BACTERIA CULTURE", "code|1": "87086", "standard_charge|gross": "95.00", "standard_charge|discounted_cash": "25.00" }
+        ];
 
-  for (let c = 0; c < text.length; c++) {
-    let cc = text[c], nc = text[c+1];
-    arr[row] = arr[row] || [];
-    arr[row][col] = arr[row][col] || '';
+        // --- HELPER: CSV Parser ---
+        const parseCSV = (text) => {
+            const arr = [];
+            let quote = false;
+            let col = 0, row = 0;
+            arr[row] = [];
+            arr[row][col] = '';
 
-    if (cc === '"' && quote && nc === '"') { 
-      arr[row][col] += cc; ++c; continue; 
-    }
-    if (cc === '"') { quote = !quote; continue; }
-    if (cc === ',' && !quote) { 
-      ++col; arr[row][col] = ''; continue; 
-    }
-    if (cc === '\n' && !quote) {
-      ++row; col = 0; arr[row] = []; arr[row][col] = ''; continue;
-    }
-    if (cc === '\r' && !quote) { continue; }
-    arr[row][col] += cc;
-  }
-  if (arr[arr.length - 1].length === 1 && arr[arr.length - 1][0] === '') {
-    arr.pop();
-  }
-  return arr;
-};
+            for (let c = 0; c < text.length; c++) {
+                let cc = text[c], nc = text[c+1];
+                arr[row] = arr[row] || [];
+                arr[row][col] = arr[row][col] || '';
 
-// --- Components ---
+                if (cc === '"' && quote && nc === '"') { arr[row][col] += cc; ++c; continue; }
+                if (cc === '"') { quote = !quote; continue; }
+                if (cc === ',' && !quote) { ++col; arr[row][col] = ''; continue; }
+                if (cc === '\n' && !quote) { ++row; col = 0; arr[row] = []; arr[row][col] = ''; continue; }
+                if (cc === '\r' && !quote) { continue; }
+                arr[row][col] += cc;
+            }
+            if (arr[arr.length - 1].length === 1 && arr[arr.length - 1][0] === '') { arr.pop(); }
+            return arr;
+        };
 
-const MetricCard = ({ title, value, icon: Icon, trend, subtext, colorClass }) => (
-  <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
-    <div className="flex items-start justify-between">
-      <div>
-        <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
-        <h3 className="text-2xl font-bold text-slate-900 tracking-tight">{value}</h3>
-      </div>
-      <div className={`p-3 rounded-xl ${colorClass} bg-opacity-10`}>
-        <Icon className={`w-5 h-5 ${colorClass.replace('bg-', 'text-')}`} />
-      </div>
-    </div>
-    <div className="mt-4 flex items-center text-sm">
-      {trend && (
-        <span className={`flex items-center font-medium ${trend === 'up' ? 'text-emerald-600' : 'text-rose-600'}`}>
-          {trend === 'up' ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
-          {subtext}
-        </span>
-      )}
-      {!trend && <span className="text-slate-400">{subtext}</span>}
-    </div>
-  </div>
-);
+        // --- COMPONENT: Metric Card ---
+        const MetricCard = ({ title, value, icon: Icon, trend, subtext, colorClass }) => {
+            return React.createElement('div', { className: "bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300" },
+                React.createElement('div', { className: "flex items-start justify-between" },
+                    React.createElement('div', null,
+                        React.createElement('p', { className: "text-sm font-medium text-slate-500 mb-1" }, title),
+                        React.createElement('h3', { className: "text-2xl font-bold text-slate-900 tracking-tight" }, value)
+                    ),
+                    React.createElement('div', { className: `p-3 rounded-xl ${colorClass} bg-opacity-10` },
+                        React.createElement(Icon, { className: `w-5 h-5 ${colorClass.replace('bg-', 'text-')}` })
+                    )
+                ),
+                React.createElement('div', { className: "mt-4 flex items-center text-sm" },
+                    trend ? React.createElement('span', { className: `flex items-center font-medium ${trend === 'up' ? 'text-emerald-600' : 'text-rose-600'}` },
+                        trend === 'up' ? React.createElement(ArrowUpRight, { className: "w-4 h-4 mr-1" }) : React.createElement(ArrowDownRight, { className: "w-4 h-4 mr-1" }),
+                        subtext
+                    ) : React.createElement('span', { className: "text-slate-400" }, subtext)
+                )
+            );
+        };
 
-export default function App() {
-  // Initialize directly with STATIC_DATA
-  const [data, setData] = useState(STATIC_DATA);
-  const [fileName, setFileName] = useState("Charleston Area Medical Center (Static)");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+        // --- MAIN COMPONENT: App ---
+        function App() {
+            const [data, setData] = useState(STATIC_DATA);
+            const [fileName, setFileName] = useState("Charleston Area Medical Center (Static)");
+            const [searchTerm, setSearchTerm] = useState("");
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+            const [activeTab, setActiveTab] = useState('dashboard');
 
-  // --- File Handling (Optional Overwrite) ---
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+            // Handle File Upload
+            const handleFileUpload = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
 
-    setLoading(true);
-    setFileName(file.name);
-    setError(null);
+                setLoading(true);
+                setFileName(file.name);
+                setError(null);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const text = e.target.result;
-        const lines = text.split('\n');
-        if (lines.length < 4) throw new Error("File too short.");
-        
-        // Skip 2 lines of metadata
-        const cleanCsvText = lines.slice(2).join('\n');
-        const rawRows = parseCSV(cleanCsvText);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const text = e.target.result;
+                        const lines = text.split('\n');
+                        if (lines.length < 4) throw new Error("File too short.");
+                        
+                        // Skip 2 lines of metadata
+                        const cleanCsvText = lines.slice(2).join('\n');
+                        const rawRows = parseCSV(cleanCsvText);
+                        if (rawRows.length < 2) throw new Error("No data found.");
 
-        if (rawRows.length < 2) throw new Error("No data found.");
+                        const headers = rawRows[0].map(h => h.trim());
+                        const body = rawRows.slice(1);
+                        const parsedData = body.map(row => {
+                            const obj = {};
+                            headers.forEach((header, index) => obj[header] = row[index]);
+                            return obj;
+                        });
 
-        const headers = rawRows[0].map(h => h.trim());
-        const body = rawRows.slice(1);
-        const parsedData = body.map(row => {
-          const obj = {};
-          headers.forEach((header, index) => obj[header] = row[index]);
-          return obj;
-        });
+                        if (!parsedData[0] || (!parsedData[0]['description'] && !parsedData[0]['code|1'])) {
+                            throw new Error("Missing required columns ('description' or 'code|1').");
+                        }
 
-        if (!parsedData[0] || (!parsedData[0]['description'] && !parsedData[0]['code|1'])) {
-           throw new Error("Missing required columns.");
+                        setData(parsedData);
+                        setLoading(false);
+                    } catch (err) {
+                        console.error(err);
+                        setError("Error: " + err.message);
+                        setLoading(false);
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            // Process Data
+            const processedData = useMemo(() => {
+                if (!data) return { filtered: [], stats: {} };
+
+                const lowerSearch = searchTerm.toLowerCase();
+                const filtered = data.filter(item => {
+                    const desc = item['description'] ? item['description'].toLowerCase() : '';
+                    const code = item['code|1'] ? item['code|1'].toString().toLowerCase() : '';
+                    return desc.includes(lowerSearch) || code.includes(lowerSearch);
+                });
+
+                let totalGross = 0;
+                let totalCash = 0;
+                let count = 0;
+
+                const cleanFiltered = filtered.map(item => {
+                    const parsePrice = (val) => {
+                        if (!val) return 0;
+                        return parseFloat(val.toString().replace(/[^0-9.-]+/g, ""));
+                    };
+
+                    const gross = parsePrice(item['standard_charge|gross']);
+                    const cash = parsePrice(item['standard_charge|discounted_cash']);
+                    
+                    if (gross > 0 || cash > 0) {
+                        totalGross += gross;
+                        totalCash += cash;
+                        count++;
+                    }
+
+                    return {
+                        description: item['description'] || "Unknown Description",
+                        code: item['code|1'] || "N/A",
+                        gross,
+                        cash,
+                        savings: gross > 0 ? Math.round(((gross - cash) / gross) * 100) : 0
+                    };
+                });
+
+                return {
+                    tableData: cleanFiltered,
+                    stats: {
+                        count: cleanFiltered.length,
+                        avgGross: count > 0 ? totalGross / count : 0,
+                        avgCash: count > 0 ? totalCash / count : 0
+                    }
+                };
+            }, [data, searchTerm]);
+
+            const fmtMoney = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+
+            return React.createElement('div', { className: "flex min-h-screen bg-slate-50 font-sans text-slate-900" },
+                
+                // Sidebar
+                React.createElement('aside', { className: "hidden lg:flex flex-col w-72 bg-slate-900 text-white p-6" },
+                    React.createElement('div', { className: "flex items-center gap-3 mb-10 px-2" },
+                        React.createElement('div', { className: "bg-blue-600 p-2 rounded-lg" },
+                            React.createElement(Activity, { className: "h-6 w-6 text-white" })
+                        ),
+                        React.createElement('div', null,
+                            React.createElement('h1', { className: "font-bold text-lg tracking-wide" }, "MedAnalytics"),
+                            React.createElement('p', { className: "text-xs text-slate-400" }, "Static Dashboard")
+                        )
+                    ),
+                    React.createElement('nav', { className: "space-y-2 flex-1" },
+                        React.createElement('button', { 
+                            onClick: () => setActiveTab('dashboard'),
+                            className: `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-blue-600 shadow-lg shadow-blue-900/50 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`
+                        },
+                            React.createElement(LayoutDashboard, { size: 20 }),
+                            React.createElement('span', { className: "font-medium" }, "Dashboard")
+                        ),
+                        React.createElement('button', { 
+                            onClick: () => setActiveTab('details'),
+                            className: `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'details' ? 'bg-blue-600 shadow-lg shadow-blue-900/50 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`
+                        },
+                            React.createElement(FileText, { size: 20 }),
+                            React.createElement('span', { className: "font-medium" }, "Data Details")
+                        )
+                    ),
+                    React.createElement('div', { className: "mt-auto pt-6 border-t border-slate-800" },
+                        React.createElement('div', { className: "bg-slate-800 rounded-xl p-4" },
+                            React.createElement('div', { className: "flex items-center gap-2 mb-3 text-slate-400" },
+                                React.createElement(Database, { size: 14 }),
+                                React.createElement('p', { className: "text-xs uppercase font-bold tracking-wider" }, "Data Source")
+                            ),
+                            React.createElement('p', { className: "text-sm font-medium text-white truncate mb-3", title: fileName }, fileName),
+                            React.createElement('label', { className: "flex items-center justify-center w-full gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium rounded-lg cursor-pointer transition-all border border-slate-600 hover:border-slate-500" },
+                                React.createElement(Upload, { size: 12 }),
+                                React.createElement('span', null, "Load Custom CSV"),
+                                React.createElement('input', { type: "file", accept: ".csv", className: "hidden", onChange: handleFileUpload })
+                            )
+                        )
+                    )
+                ),
+
+                // Main Content
+                React.createElement('main', { className: "flex-1 flex flex-col h-screen overflow-hidden" },
+                    
+                    // Header
+                    React.createElement('header', { className: "h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between z-10" },
+                        React.createElement('div', { className: "flex items-center gap-4 w-full max-w-2xl" },
+                            React.createElement('div', { className: "relative w-full" },
+                                React.createElement(Search, { className: "absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" }),
+                                React.createElement('input', {
+                                    type: "text",
+                                    placeholder: "Search CPT codes, exams, or descriptions...",
+                                    className: "w-full pl-12 pr-4 py-3 bg-slate-100 border-none rounded-xl text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-400 font-medium",
+                                    value: searchTerm,
+                                    onChange: (e) => setSearchTerm(e.target.value)
+                                })
+                            )
+                        ),
+                        React.createElement('div', { className: "flex items-center gap-4" },
+                            React.createElement('span', { className: "hidden sm:inline-flex items-center justify-center h-8 w-8 rounded-full bg-emerald-100 text-emerald-600 font-bold text-xs" }, "GH")
+                        )
+                    ),
+
+                    // Scrollable Area
+                    React.createElement('div', { className: "flex-1 overflow-y-auto p-8 space-y-8" },
+                        
+                        // Error
+                        error && React.createElement('div', { className: "p-4 bg-red-50 text-red-700 rounded-xl flex items-center gap-3 border border-red-100 animate-fade-in" },
+                            React.createElement(AlertCircle, { className: "h-5 w-5" }),
+                            error
+                        ),
+
+                        // Title
+                        React.createElement('div', null,
+                            React.createElement('h2', { className: "text-2xl font-bold text-slate-900" }, "Standard Charges 2025"),
+                            React.createElement('p', { className: "text-slate-500 mt-1" }, `Showing ${processedData.stats.count} records from dataset.`)
+                        ),
+
+                        // Metrics
+                        React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-3 gap-6" },
+                            React.createElement(MetricCard, { title: "Average Gross Charge", value: fmtMoney(processedData.stats.avgGross), icon: DollarSign, colorClass: "bg-blue-600", trend: "up", subtext: "Base rate" }),
+                            React.createElement(MetricCard, { title: "Average Cash Price", value: fmtMoney(processedData.stats.avgCash), icon: TrendingDown, colorClass: "bg-emerald-600", trend: "down", subtext: "Discounted rate" }),
+                            React.createElement(MetricCard, { title: "Total Records", value: processedData.stats.count.toLocaleString(), icon: Filter, colorClass: "bg-violet-600", subtext: "Matches found" })
+                        ),
+
+                        // Chart
+                        React.createElement('div', { className: "bg-white p-6 rounded-2xl border border-slate-100 shadow-sm" },
+                            React.createElement('div', { className: "flex items-center justify-between mb-8" },
+                                React.createElement('div', null,
+                                    React.createElement('h3', { className: "text-lg font-bold text-slate-900" }, "Price Variance"),
+                                    React.createElement('p', { className: "text-sm text-slate-500" }, "Comparing Gross vs. Cash prices for top 5 high-value items.")
+                                ),
+                                React.createElement('div', { className: "flex items-center gap-2 text-sm" },
+                                    React.createElement('div', { className: "flex items-center gap-1" },
+                                        React.createElement('span', { className: "w-3 h-3 rounded-full bg-blue-500" }),
+                                        React.createElement('span', { className: "text-slate-600" }, "Gross")
+                                    ),
+                                    React.createElement('div', { className: "flex items-center gap-1" },
+                                        React.createElement('span', { className: "w-3 h-3 rounded-full bg-emerald-500" }),
+                                        React.createElement('span', { className: "text-slate-600" }, "Cash")
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: "h-80 w-full" },
+                                processedData.tableData.length > 0 ? (
+                                    React.createElement(ResponsiveContainer, { width: "100%", height: "100%" },
+                                        React.createElement(BarChart, { data: processedData.tableData.slice(0, 5), margin: { top: 10, right: 10, left: 0, bottom: 0 }, barGap: 8 },
+                                            React.createElement(CartesianGrid, { strokeDasharray: "3 3", vertical: false, stroke: "#f1f5f9" }),
+                                            React.createElement(XAxis, { dataKey: "code", tick: { fill: '#94a3b8', fontSize: 12 }, axisLine: false, tickLine: false, dy: 10 }),
+                                            React.createElement(YAxis, { tick: { fill: '#94a3b8', fontSize: 12 }, axisLine: false, tickLine: false, tickFormatter: (val) => `$${val}` }),
+                                            React.createElement(Tooltip, { cursor: { fill: '#f8fafc' }, formatter: (value) => fmtMoney(value), contentStyle: { borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' } }),
+                                            React.createElement(Legend, null),
+                                            React.createElement(Bar, { dataKey: "gross", fill: "#3b82f6", radius: [6, 6, 0, 0], maxBarSize: 60 }),
+                                            React.createElement(Bar, { dataKey: "cash", fill: "#10b981", radius: [6, 6, 0, 0], maxBarSize: 60 })
+                                        )
+                                    )
+                                ) : (
+                                    React.createElement('div', { className: "h-full flex flex-col items-center justify-center text-slate-400" },
+                                        React.createElement(PieChart, { className: "h-10 w-10 mb-2 opacity-50" }),
+                                        React.createElement('p', null, "No data available")
+                                    )
+                                )
+                            )
+                        ),
+
+                        // Table
+                        React.createElement('div', { className: "bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden" },
+                            React.createElement('div', { className: "p-6 border-b border-slate-50 flex items-center justify-between" },
+                                React.createElement('h3', { className: "text-lg font-bold text-slate-900" }, "Detailed Line Items"),
+                                React.createElement('button', { className: "text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center" },
+                                    "View Full Report ", React.createElement(ChevronRight, { size: 16 })
+                                )
+                            ),
+                            React.createElement('div', { className: "overflow-x-auto" },
+                                React.createElement('table', { className: "w-full text-left" },
+                                    React.createElement('thead', { className: "bg-slate-50/50 text-slate-500 uppercase font-semibold text-xs tracking-wider" },
+                                        React.createElement('tr', null,
+                                            React.createElement('th', { className: "px-8 py-5" }, "CPT Code"),
+                                            React.createElement('th', { className: "px-8 py-5" }, "Description"),
+                                            React.createElement('th', { className: "px-8 py-5 text-right" }, "Gross Charge"),
+                                            React.createElement('th', { className: "px-8 py-5 text-right" }, "Cash Price"),
+                                            React.createElement('th', { className: "px-8 py-5 text-right" }, "Savings")
+                                        )
+                                    ),
+                                    React.createElement('tbody', { className: "divide-y divide-slate-50" },
+                                        processedData.tableData.slice(0, 50).map((row, idx) => (
+                                            React.createElement('tr', { key: idx, className: "hover:bg-slate-50/80 transition-colors group" },
+                                                React.createElement('td', { className: "px-8 py-5" },
+                                                    React.createElement('span', { className: "font-mono text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded" }, row.code)
+                                                ),
+                                                React.createElement('td', { className: "px-8 py-5" },
+                                                    React.createElement('div', { className: "font-medium text-slate-700 max-w-sm truncate", title: row.description }, row.description)
+                                                ),
+                                                React.createElement('td', { className: "px-8 py-5 text-right text-slate-600" }, fmtMoney(row.gross)),
+                                                React.createElement('td', { className: "px-8 py-5 text-right font-semibold text-slate-900" }, fmtMoney(row.cash)),
+                                                React.createElement('td', { className: "px-8 py-5 text-right" },
+                                                    React.createElement('span', { className: `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${row.savings > 50 ? 'bg-emerald-100 text-emerald-800' : row.savings > 20 ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-800'}` },
+                                                        `${row.savings}% Off`
+                                                    )
+                                                )
+                                            )
+                                        ))
+                                    )
+                                )
+                            ),
+                            processedData.tableData.length === 0 && (
+                                React.createElement('div', { className: "p-12 text-center text-slate-400 bg-slate-50/50" },
+                                    React.createElement(Search, { className: "h-10 w-10 mx-auto mb-3 opacity-50" }),
+                                    React.createElement('p', null, "No results found.")
+                                )
+                            )
+                        )
+                    )
+                )
+            );
         }
 
-        setData(parsedData);
-        setLoading(false);
-      } catch (err) {
-        console.error(err);
-        setError("Error: " + err.message);
-        setLoading(false);
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  // --- Logic ---
-  const processedData = useMemo(() => {
-    if (!data) return { filtered: [], stats: {} };
-
-    const lowerSearch = searchTerm.toLowerCase();
-    const filtered = data.filter(item => {
-      const desc = item['description'] ? item['description'].toLowerCase() : '';
-      const code = item['code|1'] ? item['code|1'].toString().toLowerCase() : '';
-      return desc.includes(lowerSearch) || code.includes(lowerSearch);
-    });
-
-    let totalGross = 0;
-    let totalCash = 0;
-    let count = 0;
-
-    const cleanFiltered = filtered.map(item => {
-      const parsePrice = (val) => {
-        if (!val) return 0;
-        return parseFloat(val.toString().replace(/[^0-9.-]+/g, ""));
-      };
-
-      const gross = parsePrice(item['standard_charge|gross']);
-      const cash = parsePrice(item['standard_charge|discounted_cash']);
-      
-      if (gross > 0 || cash > 0) {
-        totalGross += gross;
-        totalCash += cash;
-        count++;
-      }
-
-      return {
-        description: item['description'] || "Unknown Description",
-        code: item['code|1'] || "N/A",
-        gross,
-        cash,
-        savings: gross > 0 ? Math.round(((gross - cash) / gross) * 100) : 0
-      };
-    });
-
-    return {
-      tableData: cleanFiltered,
-      stats: {
-        count: cleanFiltered.length,
-        avgGross: count > 0 ? totalGross / count : 0,
-        avgCash: count > 0 ? totalCash / count : 0
-      }
-    };
-  }, [data, searchTerm]);
-
-  const fmtMoney = (val) => 
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
-
-  return (
-    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-      
-      {/* Sidebar Navigation */}
-      <aside className="hidden lg:flex flex-col w-72 bg-slate-900 text-white p-6">
-        <div className="flex items-center gap-3 mb-10 px-2">
-          <div className="bg-blue-600 p-2 rounded-lg">
-            <Activity className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="font-bold text-lg tracking-wide">MedAnalytics</h1>
-            <p className="text-xs text-slate-400">Static Dashboard</p>
-          </div>
-        </div>
-
-        <nav className="space-y-2 flex-1">
-          <button 
-            onClick={() => setActiveTab('dashboard')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-blue-600 shadow-lg shadow-blue-900/50 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-          >
-            <LayoutDashboard size={20} />
-            <span className="font-medium">Dashboard</span>
-          </button>
-          <button 
-             onClick={() => setActiveTab('details')}
-             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'details' ? 'bg-blue-600 shadow-lg shadow-blue-900/50 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-          >
-            <FileText size={20} />
-            <span className="font-medium">Data Details</span>
-          </button>
-        </nav>
-
-        <div className="mt-auto pt-6 border-t border-slate-800">
-           <div className="bg-slate-800 rounded-xl p-4">
-             <div className="flex items-center gap-2 mb-3 text-slate-400">
-               <Database size={14} />
-               <p className="text-xs uppercase font-bold tracking-wider">Data Source</p>
-             </div>
-             <p className="text-sm font-medium text-white truncate mb-3" title={fileName}>
-               {fileName}
-             </p>
-             
-             {/* Discreet Update Button */}
-             <label className="flex items-center justify-center w-full gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium rounded-lg cursor-pointer transition-all border border-slate-600 hover:border-slate-500">
-                <Upload size={12} />
-                <span>Load Custom CSV</span>
-                <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
-             </label>
-           </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        
-        {/* Top Header */}
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between z-10">
-           <div className="flex items-center gap-4 w-full max-w-2xl">
-             <div className="relative w-full">
-               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" />
-               <input
-                type="text"
-                placeholder="Search CPT codes, exams, or descriptions..."
-                className="w-full pl-12 pr-4 py-3 bg-slate-100 border-none rounded-xl text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-400 font-medium"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-             </div>
-           </div>
-           
-           <div className="flex items-center gap-4">
-              <span className="hidden sm:inline-flex items-center justify-center h-8 w-8 rounded-full bg-emerald-100 text-emerald-600 font-bold text-xs">
-                 GH
-              </span>
-           </div>
-        </header>
-
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-8">
-           
-           {/* Welcome / Error */}
-           {error && (
-             <div className="p-4 bg-red-50 text-red-700 rounded-xl flex items-center gap-3 border border-red-100 animate-fade-in">
-               <AlertCircle className="h-5 w-5" />
-               {error}
-             </div>
-           )}
-
-           <div>
-              <h2 className="text-2xl font-bold text-slate-900">Standard Charges 2025</h2>
-              <p className="text-slate-500 mt-1">
-                Showing {processedData.stats.count} records from static dataset.
-              </p>
-           </div>
-
-           {/* Metrics Grid */}
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-             <MetricCard 
-                title="Average Gross Charge"
-                value={fmtMoney(processedData.stats.avgGross)}
-                icon={DollarSign}
-                colorClass="bg-blue-600"
-                trend="up"
-                subtext="Base rate"
-             />
-             <MetricCard 
-                title="Average Cash Price"
-                value={fmtMoney(processedData.stats.avgCash)}
-                icon={TrendingDown}
-                colorClass="bg-emerald-600"
-                trend="down"
-                subtext="Discounted rate"
-             />
-             <MetricCard 
-                title="Total Records"
-                value={processedData.stats.count.toLocaleString()}
-                icon={Filter}
-                colorClass="bg-violet-600"
-                subtext="Matches found"
-             />
-           </div>
-
-           {/* Charts Section */}
-           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-             <div className="flex items-center justify-between mb-8">
-               <div>
-                  <h3 className="text-lg font-bold text-slate-900">Price Variance</h3>
-                  <p className="text-sm text-slate-500">Comparing Gross vs. Cash prices for top 5 high-value items.</p>
-               </div>
-               <div className="flex items-center gap-2 text-sm">
-                  <div className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                    <span className="text-slate-600">Gross</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                    <span className="text-slate-600">Cash</span>
-                  </div>
-               </div>
-             </div>
-             
-             <div className="h-80 w-full">
-              {processedData.tableData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={processedData.tableData.slice(0, 5)}
-                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                    barGap={8}
-                  >
-                    <defs>
-                      <linearGradient id="colorGross" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                      </linearGradient>
-                      <linearGradient id="colorCash" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.4}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis 
-                      dataKey="code" 
-                      tick={{ fill: '#94a3b8', fontSize: 12 }} 
-                      axisLine={false}
-                      tickLine={false}
-                      dy={10}
-                    />
-                    <YAxis 
-                      tick={{ fill: '#94a3b8', fontSize: 12 }} 
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(val) => `$${val}`}
-                    />
-                    <Tooltip 
-                      cursor={{fill: '#f8fafc'}}
-                      formatter={(value) => fmtMoney(value)}
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                    />
-                    <Bar dataKey="gross" fill="url(#colorGross)" radius={[6, 6, 0, 0]} maxBarSize={60} />
-                    <Bar dataKey="cash" fill="url(#colorCash)" radius={[6, 6, 0, 0]} maxBarSize={60} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-slate-400">
-                  <PieChart className="h-10 w-10 mb-2 opacity-50" />
-                  <p>No data available for visualization</p>
-                </div>
-              )}
-             </div>
-           </div>
-
-           {/* Table Section */}
-           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-50 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-slate-900">Detailed Line Items</h3>
-                <button className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center">
-                  View Full Report <ChevronRight size={16} />
-                </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50/50 text-slate-500 uppercase font-semibold text-xs tracking-wider">
-                    <tr>
-                      <th className="px-8 py-5">CPT Code</th>
-                      <th className="px-8 py-5">Description</th>
-                      <th className="px-8 py-5 text-right">Gross Charge</th>
-                      <th className="px-8 py-5 text-right">Cash Price</th>
-                      <th className="px-8 py-5 text-right">Savings</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {processedData.tableData.slice(0, 50).map((row, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors group">
-                        <td className="px-8 py-5">
-                          <span className="font-mono text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                            {row.code}
-                          </span>
-                        </td>
-                        <td className="px-8 py-5">
-                          <div className="font-medium text-slate-700 max-w-sm truncate" title={row.description}>
-                            {row.description}
-                          </div>
-                        </td>
-                        <td className="px-8 py-5 text-right text-slate-600">
-                           {fmtMoney(row.gross)}
-                        </td>
-                        <td className="px-8 py-5 text-right font-semibold text-slate-900">
-                           {fmtMoney(row.cash)}
-                        </td>
-                        <td className="px-8 py-5 text-right">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            row.savings > 50 
-                              ? 'bg-emerald-100 text-emerald-800' 
-                              : row.savings > 20 
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-slate-100 text-slate-800'
-                          }`}>
-                            {row.savings}% Off
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {processedData.tableData.length === 0 && (
-                 <div className="p-12 text-center text-slate-400 bg-slate-50/50">
-                    <Search className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                    <p>No results found for your search.</p>
-                 </div>
-              )}
-           </div>
-           
-        </div>
-      </main>
-    </div>
-  );
-}
+        // --- RENDER APP ---
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(App));
+    </script>
+</body>
+</html>
